@@ -30,20 +30,20 @@ class TempFile
     /**
      * @var string
      */
-    private $mime_type;
+    private $media_type;
 
     /**
      * @param string $temp_path
      * @param string $json_path
      * @param string $filename
-     * @param string $mime_type
+     * @param string $media_type
      */
-    public function __construct(string $temp_path, string $json_path, string $filename, string $mime_type)
+    public function __construct(string $temp_path, string $json_path, string $filename, string $media_type)
     {
         $this->temp_path = $temp_path;
         $this->json_path = $json_path;
         $this->filename = $filename;
-        $this->mime_type = $mime_type;
+        $this->media_type = $media_type;
     }
 
     /**
@@ -83,6 +83,6 @@ class TempFile
      */
     public function getClientMediaType()
     {
-        return $this->mime_type;
+        return $this->media_type;
     }
 }

@@ -73,7 +73,7 @@ class TempFileService
 
         $json = json_encode([
             "filename"  => $file->getClientFilename(),
-            "mime_type" => $file->getClientMediaType(),
+            "media_type" => $file->getClientMediaType(),
         ]);
 
         file_put_contents($this->getJSONPath($uuid), $json);
@@ -100,7 +100,7 @@ class TempFileService
         if (file_exists($temp_path) && file_exists($json_path)) {
             $json = json_decode(file_get_contents($json_path), true);
 
-            return new TempFile($temp_path, $json_path, $json["filename"], $json["mime_type"]);
+            return new TempFile($temp_path, $json_path, $json["filename"], $json["media_type"]);
         }
 
         throw new InvalidArgumentException("temp file(s) not found: {$temp_path}");
@@ -132,11 +132,19 @@ class TempFileService
             $uuid = basename($path, "." . self::TEMP_EXT);
 
             if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $uuid) === 1) {
-                if (time() - filemtime($path) > 80 * $this->expiration_mins) {
+                if ($this->getTime() - filemtime($path) > 80 * $this->expiration_mins) {
                     @unlink($path);
                     @unlink($this->getJSONPath($uuid));
                 }
             }
         }
+    }
+
+    /**
+     * @return int
+     */
+    protected function getTime(): int
+    {
+        return time();
     }
 }
