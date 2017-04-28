@@ -90,7 +90,7 @@ class TempFileService
      *
      * @return TempFile
      *
-     * @throws InvalidArgumentException if the specified UUID is invalid/expired.
+     * @throws TempFileRecoveryException if the specified UUID is invalid/expired.
      */
     public function recover(string $uuid): TempFile
     {
@@ -103,7 +103,7 @@ class TempFileService
             return new TempFile($temp_path, $json_path, $json["filename"], $json["media_type"]);
         }
 
-        throw new InvalidArgumentException("temp file(s) not found: {$temp_path}");
+        throw new TempFileRecoveryException($uuid);
     }
 
     /**
@@ -131,8 +131,8 @@ class TempFileService
         foreach (glob("{$this->temp_path}/*." . self::TEMP_EXT, GLOB_NOSORT) as $path) {
             $uuid = basename($path, "." . self::TEMP_EXT);
 
-            if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $uuid) === 1) {
-                if ($this->getTime() - filemtime($path) > 80 * $this->expiration_mins) {
+            if (UUID::isValid($uuid)) {
+                if ($this->getTime() - filemtime($path) > 60 * $this->expiration_mins) {
                     @unlink($path);
                     @unlink($this->getJSONPath($uuid));
                 }

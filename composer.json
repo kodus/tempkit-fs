@@ -6,6 +6,11 @@
             "Kodus\\TempKit\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Kodus\\TempKit\\Test\\": "tests/unit/"
+        }
+    },
     "require": {
         "php": ">= 7",
         "psr/http-message": "^1.0",
