@@ -1,6 +1,6 @@
 <?php
 
-namespace kodus\tempkit;
+namespace Kodus\TempKit;
 
 use InvalidArgumentException;
 use Kodus\Helpers\UUID;
@@ -33,7 +33,7 @@ class TempFileService
      * @param int    $expiration_mins expiration time in minutes (defaults to 120 minutes)
      * @param int    $flush_frequency defaults to 5, meaning flush expired files during 5% of calls to collect()
      */
-    public function __construct($temp_path, $expiration_mins = 120, $flush_frequency = 5)
+    public function __construct(string $temp_path, int $expiration_mins = 120, int $flush_frequency = 5)
     {
         if (! is_dir($temp_path)) {
             throw new InvalidArgumentException("invalid temp dir path: {$temp_path}");
@@ -61,7 +61,7 @@ class TempFileService
      *
      * @return string temporary file UUID
      */
-    public function collect(UploadedFile $file)
+    public function collect(UploadedFile $file): string
     {
         if (rand(0, 99) < $this->flush_frequency) {
             $this->flushExpiredFiles();
@@ -92,7 +92,7 @@ class TempFileService
      *
      * @throws InvalidArgumentException if the specified UUID is invalid/expired.
      */
-    public function recover($uuid)
+    public function recover(string $uuid): TempFile
     {
         $temp_path = $this->getTempPath($uuid);
         $json_path = $this->getJSONPath($uuid);
@@ -111,7 +111,7 @@ class TempFileService
      *
      * @return string
      */
-    private function getTempPath($uuid)
+    private function getTempPath(string $uuid): string
     {
         return "{$this->temp_path}/{$uuid}." . self::TEMP_EXT;
     }
@@ -121,7 +121,7 @@ class TempFileService
      *
      * @return string
      */
-    private function getJSONPath($uuid)
+    private function getJSONPath(string $uuid): string
     {
         return "{$this->temp_path}/{$uuid}.json";
     }

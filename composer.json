@@ -1,17 +1,17 @@
 {
-    "name": "kodus/tempkit",
+    "name": "Kodus/TempKit",
     "autoload": {
         "psr-4": {
-            "mindplay\\tempkit\\": "src/"
+            "Kodus\\TempKit\\": "src/"
         }
     },
     "require": {
-        "php": ">= 5.4",
+        "php": ">= 7",
         "psr/http-message": "^1.0",
         "kodus/uuid-v4": "^1.0"
     },
     "require-dev": {
-        "mindplay/testies": "^0.3.0",
-        "zendframework/zend-diactoros": "^1.4"
+        "zendframework/zend-diactoros": "^1.4",
+        "codeception/codeception": "^2.2"
     }
 }

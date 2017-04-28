@@ -1,6 +1,6 @@
 <?php
 
-namespace kodus\tempkit;
+namespace Kodus\TempKit;
 
 use RuntimeException;
 
@@ -38,7 +38,7 @@ class TempFile
      * @param string $filename
      * @param string $mime_type
      */
-    public function __construct($temp_path, $json_path, $filename, $mime_type)
+    public function __construct(string $temp_path, string $json_path, string $filename, string $mime_type)
     {
         $this->temp_path = $temp_path;
         $this->json_path = $json_path;
@@ -57,7 +57,7 @@ class TempFile
      *
      * @throws RuntimeException on failure to rename file
      */
-    public function moveTo($target_path)
+    public function moveTo(string $target_path)
     {
         if (@rename($this->temp_path, $target_path) !== true) {
             if (@copy($this->temp_path, $target_path) !== true) {

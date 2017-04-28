@@ -1,4 +1,4 @@
-kodus/tempkit
+Kodus/TempKit
 =============
 
 This package implements a server-side strategy for temporary collection and
