@@ -1,5 +1,6 @@
 {
-    "name": "Kodus/TempKit",
+    "name": "kodus/tempkit",
+    "description": "Implements a server-side strategy for collection and recovery of PSR-7 UploadedFile objects",
     "autoload": {
         "psr-4": {
             "Kodus\\TempKit\\": "src/"
@@ -8,7 +9,7 @@
     "require": {
         "php": ">= 7",
         "psr/http-message": "^1.0",
-        "kodus/uuid-v4": "^1.0"
+        "kodus/uuid-v4": "^1.1"
     },
     "require-dev": {
         "zendframework/zend-diactoros": "^1.4",
