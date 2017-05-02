@@ -12,6 +12,7 @@ use Zend\Diactoros\UploadedFile;
 class TempFileService
 {
     const TEMP_EXT = "tmp";
+    const JSON_EXT = "json";
 
     /**
      * @var string
@@ -123,18 +124,20 @@ class TempFileService
      */
     private function getJSONPath(string $uuid): string
     {
-        return "{$this->temp_path}/{$uuid}.json";
+        return "{$this->temp_path}/{$uuid}." . self::JSON_EXT;
     }
 
     private function flushExpiredFiles()
     {
-        foreach (glob("{$this->temp_path}/*." . self::TEMP_EXT, GLOB_NOSORT) as $path) {
-            $uuid = basename($path, "." . self::TEMP_EXT);
+        foreach (glob("{$this->temp_path}/*." . self::TEMP_EXT, GLOB_NOSORT) as $temp_path) {
+            $uuid = basename($temp_path, "." . self::TEMP_EXT);
 
             if (UUID::isValid($uuid)) {
-                if ($this->getTime() - filemtime($path) > 60 * $this->expiration_mins) {
-                    @unlink($path);
-                    @unlink($this->getJSONPath($uuid));
+                if ($this->getTime() - filemtime($temp_path) > 60 * $this->expiration_mins) {
+                    $json_path = $this->getJSONPath($uuid);
+
+                    @unlink($temp_path);
+                    @unlink($json_path);
                 }
             }
         }
