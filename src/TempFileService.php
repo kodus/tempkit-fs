@@ -4,7 +4,7 @@ namespace Kodus\TempKit;
 
 use InvalidArgumentException;
 use Kodus\Helpers\UUID;
-use Zend\Diactoros\UploadedFile;
+use Psr\Http\Message\UploadedFileInterface;
 
 /**
  * This class provides a facility for temporary collection and recovery of uploaded files.
@@ -58,11 +58,11 @@ class TempFileService
      *
      * The returned UUID can be used to {@see recover} the file at a later time.
      *
-     * @param UploadedFile $file
+     * @param UploadedFileInterface $file
      *
      * @return string temporary file UUID
      */
-    public function collect(UploadedFile $file): string
+    public function collect(UploadedFileInterface $file): string
     {
         if (rand(0, 99) < $this->flush_frequency) {
             $this->flushExpiredFiles();
