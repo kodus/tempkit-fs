@@ -51,4 +51,25 @@ foreach ($uuids as $uuid) {
 }
 ```
 
+Alternatively, obtain the path to the temporary file and move/copy the file by other means - for
+example, to import an uploaded file into [FlySystem](https://flysystem.thephpleague.com/recipes/):
+
+```php
+$file = $service->recover($uuid);
+
+$stream = fopen($file->getTempPath(), "r");
+
+$filesystem->writeStream("uploads/" . $file->getClientFilename(), $stream);
+
+fclose($stream);
+
+$file->flush(); // optionally flush the temporary file after copying
+```
+
+Note that, if you don't flush the temporary file, it will of course be garbage-collected after
+the defined expiration period.
+
+Also, if you manually rename or move the temporary file, the JSON meta-data file will be collected
+and flushed for you immediately when the `TempFile` instance is destroyed.
+
 #### Refer to [`TempFileService`](src/TempFileService.php) for inline documentation.

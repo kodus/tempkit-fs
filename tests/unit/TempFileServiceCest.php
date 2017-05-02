@@ -44,7 +44,7 @@ class TempFileServiceCest
         $client_media_type = self::MEDIA_TYPE;
 
         $uploaded_file = new UploadedFile(
-            new Stream($uploaded_file_path),
+            $uploaded_file_path,
             strlen($file_contents),
             UPLOAD_ERR_OK,
             $client_filename,
@@ -65,11 +65,11 @@ class TempFileServiceCest
 
         $I->assertTrue(UUID::isValid($uuid));
 
-        $I->assertFileExists($uploaded_file_path, "uploaded file has been collected");
-
         // recover the uploaded file:
 
         $recovered_file = $service->recover($uuid);
+
+        $I->assertFileExists($recovered_file->getTempPath(), "uploaded file has been collected");
 
         $I->assertSame(self::FILENAME, $recovered_file->getClientFilename());
         $I->assertSame(self::MEDIA_TYPE, $recovered_file->getClientMediaType());

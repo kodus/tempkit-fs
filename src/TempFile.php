@@ -53,6 +53,8 @@ class TempFile
      *
      * The destination folder must already exist.
      *
+     * Alternatively, use {@see getTempPath()} if you intend to move the temporary file by other means.
+     *
      * @param string $target_path absolute destination path, including filename
      *
      * @throws RuntimeException on failure to rename file
@@ -71,6 +73,33 @@ class TempFile
     }
 
     /**
+     * Obtain the absolute temporary path.
+     *
+     * Use this if you intend to manually move the temporary file to a permanent location.
+     *
+     * If you copied the file, consider using {@see flush()} to garbage-collect it immediately after.
+     *
+     * Alternatively, use {@see moveTo()} to move the file from it's temporary location.
+     *
+     * @return string absolute path of temporary file
+     */
+    public function getTempPath(): string
+    {
+        return $this->temp_path;
+    }
+
+    /**
+     * Immediately garbage-collect this temporary file.
+     *
+     * Use this to clean up e.g. after copying the temporary file.
+     */
+    public function flush()
+    {
+        @unlink($this->temp_path);
+        @unlink($this->json_path);
+    }
+
+    /**
      * @return string original filename, as specified by the client when this file was collected.
      */
     public function getClientFilename()
@@ -84,5 +113,15 @@ class TempFile
     public function getClientMediaType()
     {
         return $this->media_type;
+    }
+
+    /**
+     * @internal
+     */
+    public function __destruct()
+    {
+        if (! file_exists($this->temp_path)) {
+            @unlink($this->json_path); // temp file was removed - garbage-collect the JSON meta-data file
+        }
     }
 }
