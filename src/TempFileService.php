@@ -33,9 +33,15 @@ class TempFileService
      * @param string $temp_path       absolute path of temporary storage folder
      * @param int    $expiration_mins expiration time in minutes (defaults to 120 minutes)
      * @param int    $flush_frequency defaults to 5, meaning flush expired files during 5% of calls to collect()
+     *
+     * @throws InvalidArgumentException
      */
     public function __construct(string $temp_path, int $expiration_mins = 120, int $flush_frequency = 5)
     {
+        if (! file_exists($temp_path) && file_exists(dirname($temp_path))) {
+            $this->mkdir($temp_path); // ensure that the parent path exists
+        }
+
         if (! is_dir($temp_path)) {
             throw new InvalidArgumentException("invalid temp dir path: {$temp_path}");
         }
@@ -73,7 +79,7 @@ class TempFileService
         $file->moveTo($this->getTempPath($uuid));
 
         $json = json_encode([
-            "filename"  => $file->getClientFilename(),
+            "filename"   => $file->getClientFilename(),
             "media_type" => $file->getClientMediaType(),
         ]);
 
@@ -149,5 +155,22 @@ class TempFileService
     protected function getTime(): int
     {
         return time();
+    }
+
+    /**
+     * Recursively create directories and apply permission mask
+     *
+     * @param string $path absolute directory path
+     */
+    private function mkdir($path)
+    {
+        $parent_path = dirname($path);
+
+        if (! file_exists($parent_path)) {
+            $this->mkdir($parent_path); // recursively create parent dirs first
+        }
+
+        mkdir($path);
+        chmod($path, 0775);
     }
 }
