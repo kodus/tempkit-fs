@@ -39,7 +39,8 @@ class TempFileService
     public function __construct(string $temp_path, int $expiration_mins = 120, int $flush_frequency = 5)
     {
         if (! file_exists($temp_path) && file_exists(dirname($temp_path))) {
-            $this->mkdir($temp_path); // ensure that the parent path exists
+            mkdir($temp_path); // ensure that the parent path exists
+            chmod($temp_path, 0775);
         }
 
         if (! is_dir($temp_path)) {
@@ -157,20 +158,5 @@ class TempFileService
         return time();
     }
 
-    /**
-     * Recursively create directories and apply permission mask
-     *
-     * @param string $path absolute directory path
-     */
-    private function mkdir($path)
-    {
-        $parent_path = dirname($path);
 
-        if (! file_exists($parent_path)) {
-            $this->mkdir($parent_path); // recursively create parent dirs first
-        }
-
-        mkdir($path);
-        chmod($path, 0775);
-    }
 }
