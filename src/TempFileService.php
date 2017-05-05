@@ -39,8 +39,7 @@ class TempFileService
     public function __construct(string $temp_path, int $expiration_mins = 120, int $flush_frequency = 5)
     {
         if (! file_exists($temp_path) && file_exists(dirname($temp_path))) {
-            mkdir($temp_path); // ensure that the parent path exists
-            chmod($temp_path, 0775);
+            mkdir($temp_path, 0775); // ensure that the parent path exists
         }
 
         if (! is_dir($temp_path)) {
