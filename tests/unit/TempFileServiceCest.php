@@ -13,7 +13,7 @@ use Zend\Diactoros\UploadedFile;
 
 class TempFileServiceCest
 {
-    const FILENAME = "hello.txt";
+    const FILENAME   = "hello.txt";
     const MEDIA_TYPE = "text/plain";
 
     private $output_dir;
@@ -55,9 +55,16 @@ class TempFileServiceCest
 
         $temp_path = "{$this->output_dir}/temp";
 
-        mkdir($temp_path);
+        // Delete path if exists
+        FileSystem::deleteDir($temp_path);
 
         $service = new TempFileService($temp_path);
+
+        // Assert that the path was created and is writable
+        $I->assertTrue(file_exists($temp_path));
+        $I->assertTrue(is_writable($temp_path));
+
+        // assert the folder was created
 
         // collect the uploaded file as a temporary file:
 
