@@ -1,5 +1,5 @@
 {
-    "name": "kodus/tempkit",
+    "name": "kodus/tempkit-fs",
     "description": "Implements a server-side strategy for collection and recovery of PSR-7 UploadedFile objects",
     "autoload": {
         "psr-4": {
