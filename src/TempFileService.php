@@ -6,6 +6,7 @@ use InvalidArgumentException;
 use Kodus\Helpers\UUID;
 use League\Flysystem\FileNotFoundException;
 use League\Flysystem\Filesystem;
+use League\Flysystem\FilesystemInterface;
 use Psr\Http\Message\UploadedFileInterface;
 
 /**
@@ -37,13 +38,13 @@ class TempFileService
     private $filesystem;
 
     /**
-     * @param Filesystem $filesystem      the Filesystem to use
-     * @param string     $temp_path       absolute path of temporary storage folder (within the given Filesystem)
-     * @param int        $expiration_mins expiration time in minutes (defaults to 120 minutes)
-     * @param int        $flush_frequency defaults to 5, meaning flush expired files during 5% of calls to collect()
+     * @param FilesystemInterface $filesystem      the Filesystem instance to use
+     * @param string              $temp_path       absolute path of temporary storage folder (within the given Filesystem)
+     * @param int                 $expiration_mins expiration time in minutes (defaults to 120 minutes)
+     * @param int                 $flush_frequency defaults to 5, meaning flush expired files during 5% of calls to collect()
      */
     public function __construct(
-        Filesystem $filesystem,
+        FilesystemInterface $filesystem,
         string $temp_path = "temp",
         int $expiration_mins = 120,
         int $flush_frequency = 5
