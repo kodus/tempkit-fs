@@ -4,6 +4,8 @@ namespace Kodus\TempKit;
 
 use InvalidArgumentException;
 use Kodus\Helpers\UUID;
+use League\Flysystem\FileNotFoundException;
+use League\Flysystem\Filesystem;
 use Psr\Http\Message\UploadedFileInterface;
 
 /**
@@ -30,30 +32,27 @@ class TempFileService
     private $expiration_mins;
 
     /**
-     * @param string $temp_path       absolute path of temporary storage folder
-     * @param int    $expiration_mins expiration time in minutes (defaults to 120 minutes)
-     * @param int    $flush_frequency defaults to 5, meaning flush expired files during 5% of calls to collect()
-     *
-     * @throws InvalidArgumentException
+     * @var Filesystem
      */
-    public function __construct(string $temp_path, int $expiration_mins = 120, int $flush_frequency = 5)
-    {
-        if (! file_exists($temp_path) && file_exists(dirname($temp_path))) {
-            mkdir($temp_path, 0775); // ensure that the parent path exists
-        }
+    private $filesystem;
 
-        if (! is_dir($temp_path)) {
-            throw new InvalidArgumentException("invalid temp dir path: {$temp_path}");
-        }
-
-        if (! is_writable($temp_path)) {
-            throw new InvalidArgumentException("temp dir path is not writable: {$temp_path}");
-        }
-
+    /**
+     * @param Filesystem $filesystem      the Filesystem to use
+     * @param string     $temp_path       absolute path of temporary storage folder (within the given Filesystem)
+     * @param int        $expiration_mins expiration time in minutes (defaults to 120 minutes)
+     * @param int        $flush_frequency defaults to 5, meaning flush expired files during 5% of calls to collect()
+     */
+    public function __construct(
+        Filesystem $filesystem,
+        string $temp_path = "temp",
+        int $expiration_mins = 120,
+        int $flush_frequency = 5
+    ) {
         if ($flush_frequency < 1 || $flush_frequency > 100) {
             throw new InvalidArgumentException("invalid flush frequency: {$flush_frequency} (must be in range 1..100)");
         }
 
+        $this->filesystem = $filesystem;
         $this->temp_path = $temp_path;
         $this->flush_frequency = $flush_frequency;
         $this->expiration_mins = $expiration_mins;
@@ -76,14 +75,14 @@ class TempFileService
 
         $uuid = UUID::create();
 
-        $file->moveTo($this->getTempPath($uuid));
-
         $json = json_encode([
             "filename"   => $file->getClientFilename(),
             "media_type" => $file->getClientMediaType(),
         ]);
 
-        file_put_contents($this->getJSONPath($uuid), $json);
+        $this->filesystem->writeStream($this->getTempPath($uuid), $file->getStream()->detach());
+
+        $this->filesystem->write($this->getJSONPath($uuid), $json);
 
         return $uuid;
     }
@@ -104,10 +103,10 @@ class TempFileService
         $temp_path = $this->getTempPath($uuid);
         $json_path = $this->getJSONPath($uuid);
 
-        if (file_exists($temp_path) && file_exists($json_path)) {
-            $json = json_decode(file_get_contents($json_path), true);
+        if ($this->filesystem->has($temp_path) && $this->filesystem->has($json_path)) {
+            $json = json_decode($this->filesystem->read($json_path), true);
 
-            return new TempFile($temp_path, $json_path, $json["filename"], $json["media_type"]);
+            return new TempFile($this->filesystem, $temp_path, $json_path, $json["filename"], $json["media_type"]);
         }
 
         throw new TempFileRecoveryException($uuid);
@@ -135,17 +134,28 @@ class TempFileService
 
     private function flushExpiredFiles()
     {
-        foreach (glob("{$this->temp_path}/*." . self::TEMP_EXT, GLOB_NOSORT) as $temp_path) {
-            $uuid = basename($temp_path, "." . self::TEMP_EXT);
+        foreach ($this->filesystem->listPaths($this->temp_path) as $temp_path) {
+            if (fnmatch("*." . self::TEMP_EXT, $temp_path)) {
+                $uuid = basename($temp_path, "." . self::TEMP_EXT);
 
-            if (UUID::isValid($uuid)) {
-                if ($this->getTime() - filemtime($temp_path) > 60 * $this->expiration_mins) {
-                    $json_path = $this->getJSONPath($uuid);
+                if (UUID::isValid($uuid)) {
+                    if ($this->getTime() - $this->filesystem->getTimestamp($temp_path) > 60 * $this->expiration_mins) {
+                        $json_path = $this->getJSONPath($uuid);
 
-                    @unlink($temp_path);
-                    @unlink($json_path);
+                        $this->delete($temp_path);
+                        $this->delete($json_path);
+                    }
                 }
             }
+        }
+    }
+
+    private function delete(string $path)
+    {
+        try {
+            $this->filesystem->delete($path);
+        } catch (FileNotFoundException $e) {
+            return;
         }
     }
 
@@ -156,6 +166,4 @@ class TempFileService
     {
         return time();
     }
-
-
 }

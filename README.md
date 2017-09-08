@@ -1,10 +1,14 @@
-Kodus/TempKit
-=============
+kodus/tempkit-fs
+================
 
 This package implements a server-side strategy for temporary collection and
-recovery of [PSR-7](http://www.php-fig.org/psr/psr-7/) `UploadedFile` objects.
+recovery of [PSR-7](http://www.php-fig.org/psr/psr-7/) `UploadedFile` objects
+as files stored in a [Flysystem](http://flysystem.thephpleague.com/) file-system.
 
-[![PHP Version](https://img.shields.io/badge/php-7.0%2B-blue.svg)](https://packagist.org/packages/kodus/tempkit)
+This is a fork of [`kodus/tempkit`](https://github.com/kodus/tempkit) which
+implements the same thing using the regular file-system API in PHP.
+
+[![PHP Version](https://img.shields.io/badge/php-7.0%2B-blue.svg)](https://packagist.org/packages/kodus/tempkit-fs)
 
 You can use this service to implement controllers that collect uploaded files
 posted asynchronously by a browser and return the temporary file UUIDs, then,
@@ -16,10 +20,10 @@ Unrecovered files are automatically flushed after a defined expiration period.
 
 ## Usage
 
-Bootstrap the service:
+Bootstrap the service using an existing Flysystem `FilesystemInterface` instance:
 
 ```php
-$service = new TempFileService(__DIR__ . '/temp');
+$service = new TempFileService($filesystem, __DIR__ . '/temp');
 ```
 
 In your asynchronous *file* post-controller, collect posted files and return UUIDs:
@@ -49,21 +53,6 @@ foreach ($uuids as $uuid) {
 
     $file->moveTo(__DIR__ . '/files/' . $file->getClientFilename());
 }
-```
-
-Alternatively, obtain the path to the temporary file and move/copy the file by other means - for
-example, to import an uploaded file into [FlySystem](https://flysystem.thephpleague.com/recipes/):
-
-```php
-$file = $service->recover($uuid);
-
-$stream = fopen($file->getTempPath(), "r");
-
-$filesystem->writeStream("uploads/" . $file->getClientFilename(), $stream);
-
-fclose($stream);
-
-$file->flush(); // optionally flush the temporary file after copying
 ```
 
 Note that, if you don't flush the temporary file, it will of course be garbage-collected after

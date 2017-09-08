@@ -2,11 +2,13 @@
 
 namespace Kodus\TempKit\Test;
 
-use Codeception\Util\FileSystem;
 use Kodus\Helpers\UUID;
 use Kodus\TempKit\TempFile;
 use Kodus\TempKit\TempFileRecoveryException;
 use Kodus\TempKit\TempFileService;
+use League\Flysystem\Filesystem;
+use League\Flysystem\Memory\MemoryAdapter;
+use League\Flysystem\Plugin\ListPaths;
 use UnitTester;
 use Zend\Diactoros\Stream;
 use Zend\Diactoros\UploadedFile;
@@ -16,17 +18,21 @@ class TempFileServiceCest
     const FILENAME   = "hello.txt";
     const MEDIA_TYPE = "text/plain";
 
-    private $output_dir;
+    /**
+     * @var string
+     */
+    private $temp_dir;
+
+    /**
+     * @var Filesystem
+     */
+    private $filesystem;
 
     public function _before(UnitTester $I)
     {
-        $this->output_dir = dirname(__DIR__) . "/_output/TempFileServiceCest";
-
-        if (! is_dir($this->output_dir)) {
-            mkdir($this->output_dir);
-        } else {
-            FileSystem::doEmptyDir($this->output_dir);
-        }
+        $this->temp_dir = dirname(__DIR__) . "/_output";
+        $this->filesystem = new Filesystem(new MemoryAdapter());
+        $this->filesystem->addPlugin(new ListPaths());
     }
 
     public function collectAndRecoverUploadedFiles(UnitTester $I)
@@ -37,7 +43,7 @@ class TempFileServiceCest
 
         $client_filename = self::FILENAME;
 
-        $uploaded_file_path = "{$this->output_dir}/{$client_filename}";
+        $uploaded_file_path = "{$this->temp_dir}/{$client_filename}";
 
         file_put_contents($uploaded_file_path, $file_contents);
 
@@ -51,20 +57,7 @@ class TempFileServiceCest
             $client_media_type
         );
 
-        // bootstrap the service for test:
-
-        $temp_path = "{$this->output_dir}/temp";
-
-        // Delete path if exists
-        FileSystem::deleteDir($temp_path);
-
-        $service = new TempFileService($temp_path);
-
-        // Assert that the path was created and is writable
-        $I->assertTrue(file_exists($temp_path));
-        $I->assertTrue(is_writable($temp_path));
-
-        // assert the folder was created
+        $service = new TempFileService($this->filesystem, "tmp");
 
         // collect the uploaded file as a temporary file:
 
@@ -76,20 +69,18 @@ class TempFileServiceCest
 
         $recovered_file = $service->recover($uuid);
 
-        $I->assertFileExists($recovered_file->getTempPath(), "uploaded file has been collected");
+        $I->assertTrue($this->filesystem->has($recovered_file->getTempPath()), "uploaded file has been collected");
 
         $I->assertSame(self::FILENAME, $recovered_file->getClientFilename());
         $I->assertSame(self::MEDIA_TYPE, $recovered_file->getClientMediaType());
 
-        $destination_path = "{$this->output_dir}/{$client_filename}";
+        $recovered_file->moveTo($client_filename);
 
-        $recovered_file->moveTo($destination_path);
+        $I->assertFalse($this->filesystem->has($recovered_file->getTempPath()), "uploaded file has been moved");
 
-        $I->assertFileExists($destination_path);
+        $I->assertSame($file_contents, $this->filesystem->read($client_filename));
 
-        $I->assertSame($file_contents, file_get_contents($destination_path));
-
-        $I->assertSame([], glob("{$temp_path}/*"), "temp dir is empty (temporary file was recovered)");
+        $I->assertSame([], $this->filesystem->listPaths("tmp"), "temp dir is empty (temporary file was recovered)");
     }
 
     public function flushesExpiredFiles(UnitTester $I)
@@ -99,7 +90,7 @@ class TempFileServiceCest
         $create_file = function () {
             $file_contents = str_repeat("0123456789", 1000);
 
-            $uploaded_file_path = "{$this->output_dir}/" . self::FILENAME;
+            $uploaded_file_path = "{$this->temp_dir}/" . self::FILENAME;
 
             file_put_contents($uploaded_file_path, $file_contents);
 
@@ -116,11 +107,7 @@ class TempFileServiceCest
 
         // bootstrap a mock service for test:
 
-        $temp_path = "{$this->output_dir}/temp";
-
-        mkdir($temp_path);
-
-        $service = new MockTempFileService($temp_path, 1, 100); // always flush after 1 minute
+        $service = new MockTempFileService($this->filesystem, "tmp", 1, 100); // always flush after 1 minute
 
         $service->time = time(); // fake time
 
@@ -152,6 +139,6 @@ class TempFileServiceCest
 
         $I->assertInstanceOf(TempFileRecoveryException::class, $exception);
 
-        $I->assertCount(1, glob("{$temp_path}/*.tmp"), "temp dir is empty (temporary file was flushed)");
+        $I->assertCount(2, $this->filesystem->listPaths("tmp"), "temp dir contains only one json/tmp file pair");
     }
 }

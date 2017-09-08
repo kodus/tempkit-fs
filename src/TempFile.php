@@ -2,6 +2,9 @@
 
 namespace Kodus\TempKit;
 
+use League\Flysystem\File;
+use League\Flysystem\FileNotFoundException;
+use League\Flysystem\FilesystemInterface;
 use RuntimeException;
 
 /**
@@ -12,6 +15,11 @@ use RuntimeException;
  */
 class TempFile
 {
+    /**
+     * @var FilesystemInterface
+     */
+    private $filesystem;
+
     /**
      * @var string
      */
@@ -33,17 +41,24 @@ class TempFile
     private $media_type;
 
     /**
-     * @param string $temp_path
-     * @param string $json_path
-     * @param string $filename
-     * @param string $media_type
+     * @param FilesystemInterface $filesystem
+     * @param string              $temp_path
+     * @param string              $json_path
+     * @param string              $filename
+     * @param string              $media_type
      */
-    public function __construct(string $temp_path, string $json_path, string $filename, string $media_type)
-    {
+    public function __construct(
+        FilesystemInterface $filesystem,
+        string $temp_path,
+        string $json_path,
+        string $filename,
+        string $media_type
+    ) {
         $this->temp_path = $temp_path;
         $this->json_path = $json_path;
         $this->filename = $filename;
         $this->media_type = $media_type;
+        $this->filesystem = $filesystem;
     }
 
     /**
@@ -51,9 +66,7 @@ class TempFile
      *
      * The full destination path must be specified, including the filename.
      *
-     * The destination folder must already exist.
-     *
-     * Alternatively, use {@see getTempPath()} if you intend to move the temporary file by other means.
+     * Alternatively, use {@see getTempFile()} if you intend to move the temporary file by other means.
      *
      * @param string $target_path absolute destination path, including filename
      *
@@ -61,15 +74,11 @@ class TempFile
      */
     public function moveTo(string $target_path)
     {
-        if (@rename($this->temp_path, $target_path) !== true) {
-            if (@copy($this->temp_path, $target_path) !== true) {
-                throw new RuntimeException("unable to move '{$this->temp_path}' to '{$target_path}'");
-            }
-
-            @unlink($this->temp_path);
+        if (! $this->filesystem->rename($this->temp_path, $target_path)) {
+            throw new RuntimeException("unable to move '{$this->temp_path}' to '{$target_path}'");
         }
 
-        @unlink($this->json_path);
+        $this->delete($this->json_path);
     }
 
     /**
@@ -81,7 +90,7 @@ class TempFile
      *
      * Alternatively, use {@see moveTo()} to move the file from it's temporary location.
      *
-     * @return string absolute path of temporary file
+     * @return string temporary file path
      */
     public function getTempPath(): string
     {
@@ -95,8 +104,8 @@ class TempFile
      */
     public function flush()
     {
-        @unlink($this->temp_path);
-        @unlink($this->json_path);
+        $this->delete($this->temp_path);
+        $this->delete($this->json_path);
     }
 
     /**
@@ -115,13 +124,24 @@ class TempFile
         return $this->media_type;
     }
 
+    private function delete(string $path)
+    {
+        try {
+            $this->filesystem->delete($path);
+        } catch (FileNotFoundException $e) {
+            return;
+        }
+    }
+
     /**
      * @internal
      */
     public function __destruct()
     {
-        if (! file_exists($this->temp_path)) {
-            @unlink($this->json_path); // temp file was removed - garbage-collect the JSON meta-data file
+        if (! $this->filesystem->has($this->temp_path)) {
+            // temp file was removed - garbage-collect the JSON meta-data file:
+
+            $this->delete($this->json_path);
         }
     }
 }
